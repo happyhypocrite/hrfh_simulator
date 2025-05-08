@@ -1,7 +1,7 @@
 import random
 import numpy as np
 
-def _responding_treatment_type(pain_score, pain_history=None, das_score=None):
+def _responding_treatment_type(pain_score, pain_history=None, das_score=None, dmard_use=None, seed=None):
     """
     Determine which treatment to apply based on pain patterns
     
@@ -11,11 +11,16 @@ def _responding_treatment_type(pain_score, pain_history=None, das_score=None):
         das_score: Disease Activity Score
         
     Returns:
-        str: Treatment type to apply, or None if no new treatment needed
+        tuple: (treatment_type, updated_dmard_use) - Treatment type to apply and updated DMARD counter   
     """
+
+    if seed is not None:
+        random.seed(seed)
+        np.random.seed(seed)
+    
     # Define treatment thresholds
     if pain_history is None:
-        return None
+        return None, dmard_use
     
     recent_days = sorted(pain_history.keys())[-7:] if len(pain_history) >= 7 else sorted(pain_history.keys())
     recent_pain = [pain_history[day] for day in recent_days]
@@ -26,20 +31,21 @@ def _responding_treatment_type(pain_score, pain_history=None, das_score=None):
     
     # Treatment decision logic
     if max_pain >= 8.5:  # Acute severe flare
-        return "emergency_steroid"
+        return "emergency_steroid", dmard_use
     elif max_pain >= 7.0:  # Significant pain
-        return "nsaid" 
-    elif avg_pain >= 6.0 and len(recent_pain) >= 5:  # Persistent moderate pain
-        if das_score and das_score >= 5.1:  # High disease activity
-            return "biologic"
+        return "nsaid", dmard_use
+    elif avg_pain >= 6.0 and len(recent_pain) >= 7:  # Persistent moderate pain
+        if dmard_use > 2:  # High disease activity
+            return "biologic", dmard_use
         else:
-            return "dmard"
+            dmard_use += 1
+            return "dmard", dmard_use
     elif 4.0 <= avg_pain < 6.0 and len(recent_pain) >= 7:  # Chronic mild pain
-        return "physical_therapy"
+        return "physical_therapy", dmard_use
     else:
-        return None
+        return None, dmard_use
 
-def _treatment_effect(treatment_type, days_on_treatment=0):
+def _treatment_effect(treatment_type, days_on_treatment=0, seed = None):
     """
     Calculate the effect of a treatment based on type and duration
     
@@ -50,6 +56,11 @@ def _treatment_effect(treatment_type, days_on_treatment=0):
     Returns:
         float: Pain reduction effect (negative value to reduce pain)
     """
+
+    if seed is not None:
+        random.seed(seed)
+        np.random.seed(seed)
+    
     # Treatment dictionary with effect profiles
     # Format: (max_effect, onset_days, duration_days, variability)
     treatment_dict = {
