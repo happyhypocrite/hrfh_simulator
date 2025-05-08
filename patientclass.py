@@ -2,10 +2,12 @@ import random
 import numpy as np
 class patientPainGenerator:
     '''Patient class to generate per day pain score data '''
-    def __init__(self, id, das_score, seed = None, noise_amplitude = 0.2, disease_activity_scalar = 1.2):
+    def __init__(self, id, das_score, seed = None, noise_amplitude = 1.2):
         
         from flare_determination import _flare_chance, _flare_longetivty
         from treatment_determination import _responding_treatment_type, _treatment_effect
+        from das_score_changes import _reduce_das_on_dmard, _increase_das_on_flare
+
         active_flare = 0
         flare_days_remaining = 0
         days = 180
@@ -20,18 +22,18 @@ class patientPainGenerator:
         self.das_score = float(das_score)
         self.pain_persistence = patient_pain_persistence # persistence factor (how much previous pain influences current)
         self.noise_amplitude = noise_amplitude # random fluctuation amplitude
-        self.disease_activity_scalar = disease_activity_scalar  # scaling factor based on disease activity
         self.pain_data = {} # dictionary to store pain data
         self.treatments = {} #Active treatment dictionary, Key = treatment_type, Value = days_on_treatment 
         self.treatment_history = []
-        self.pain_data[0] = min(10, max(1, self.das_score * 1.5))  #Initialise the pain for day 1
+        self.pain_data[0] = min(10, max(1, self.das_score * 1.8))  #Initialise the pain for day 1
         self.treatment_response = {
-        "emergency_steroid": random.uniform(0, 1),
-        "nsaid": random.uniform(0, 1),
-        "dmard": random.uniform(0, 1),
-        "biologic": random.uniform(0, 1),
+        "emergency_steroid": random.uniform(0.5, 1),
+        "nsaid": random.uniform(0.5, 1),
+        "dmard": random.uniform(0.7, 1),
+        "biologic": random.uniform(0.7, 1),
         "physical_therapy": random.uniform(0, 1)
     } # random determination of scale of response to treatment
+        self.treatment_start_days = {}
         
         #dmard Logic
         dmard_counter = 0
@@ -40,7 +42,7 @@ class patientPainGenerator:
         # For loop in order to model pain data and store within patient class
         for day in range(1,days):
             previous_pain = self.pain_data[day-1] # defining how much pain is carried across
-            random_factor = random.uniform(-1, 1) # introducing noise
+            random_factor = random.choice([-0.5, 0, 0.5]) # introducing noise
 
         #------------- FLARE MODULE -------------#
         # Active flare maintain the same pain level, end on duration time-out
@@ -56,9 +58,10 @@ class patientPainGenerator:
             # Flare instance
             if adjusted_chance_flare is not None: 
                 flare_extend, flare_duration = _flare_longetivty(adjusted_chance_flare)
+                flare_pain_score = 4
                 
                 # Pain adjust on flare
-                new_pain = (self.pain_persistence * previous_pain) + (self.noise_amplitude * random_factor * self.disease_activity_scalar * self.das_score/5) + (adjusted_chance_flare * 2)
+                new_pain = (previous_pain) + (self.noise_amplitude * random_factor) + (flare_pain_score)
                 
                 # Flare duration and timeout
                 if flare_extend:
@@ -67,7 +70,7 @@ class patientPainGenerator:
                     flare_pain_level = new_pain  # Store the pain level to maintain during flare
             else:
                 # No flare therefore normal pain calculation
-                new_pain = (self.pain_persistence * previous_pain) + (self.noise_amplitude * random_factor * self.disease_activity_scalar * self.das_score/5)
+                new_pain = (previous_pain) + (self.noise_amplitude * random_factor)
 
             #------------- TREATMENT MODULE -------------#
             # Treatment start on pain threshold
@@ -80,10 +83,9 @@ class patientPainGenerator:
                 )
                 
                 # Start new treatment logic - if recommended and not already on it - MAYBE WE ADD IN THAT ONLY CERTAIN # OF TREATMENTS AT ANYONE TIME?
-                if new_treatment and new_treatment not in self.treatments:
+                if new_treatment and new_treatment not in self.treatments: # and len(self.treatments) < 5: # limit to 2 treatments at anyone time
                     self.treatments[new_treatment] = 0
                     self.treatment_history.append(new_treatment)
-
 
             # Apply treatment effects to pain (inc. duration of effect)
             treatment_effect = 0
@@ -113,6 +115,12 @@ class patientPainGenerator:
             # New Pain Data added for this day
             self.pain_data[day] = new_pain 
 
+            #------------- DAS SCORE MODULE -------------#
+            das_score = _reduce_das_on_dmard(self.treatments, self.das_score)
+            das_score = _increase_das_on_flare(flare_days_remaining, self.das_score)
+
+
+
     # Class method to generate the dataframe of patient pain
     def get_pain_dataframe(self):
         """
@@ -137,7 +145,7 @@ class patientPainGenerator:
 
 from plot_pain import plot_pain_over_time
 
-p1 = patientPainGenerator('p1', 1, seed = 42)
+p1 = patientPainGenerator('p1', 2, seed = 42)
 df = p1.get_pain_dataframe()
 print(df)
 

@@ -30,7 +30,7 @@ def _responding_treatment_type(pain_score, pain_history=None, das_score=None, dm
     max_pain = max(recent_pain)
     
     # Treatment decision logic
-    if max_pain >= 8.5:  # Acute severe flare
+    if max_pain >= 8:  # Acute severe flare
         return "emergency_steroid", dmard_use
     elif max_pain >= 7.0:  # Significant pain
         return "nsaid", dmard_use
@@ -65,13 +65,13 @@ def _treatment_effect(treatment_type, days_on_treatment=0, seed = None):
     # Format: (max_effect, onset_days, duration_days, variability)
     treatment_dict = {
         # Immediate relief treatments
-        "emergency_steroid": (-4.0, 1, 7, 0.1),    # Strong, quick, short duration
-        "nsaid":            (-1.5, 1, 14, 0.3),    # Moderate, quick onset
+        "emergency_steroid": (-0.5, 1, 21, 0.1),    # Strong, quick, short duration
+        "nsaid":            (-0.2, 1, 7, 0.3),    # Moderate, quick onset
         
         # Delayed effect treatments
-        "dmard":            (-2.0, 14, 90, 0.2),   # Stronger but takes 2 weeks
-        "biologic":         (-3.0, 28, 180, 0.3),  # Strongest but takes 4 weeks
-        "physical_therapy": (-1.0, 7, 28, 0.4)     # Mild effect, moderate onset
+        "dmard":            (-0.03, 14, 1800, 0.2),   # Stronger but takes 2 weeks
+        "biologic":         (-0.04, 28, 1800, 0.3),  # Strongest but takes 4 weeks
+        "physical_therapy": (-0.0015, 7, 28, 0.4)    # Mild effect, moderate onset
     }
     
     if treatment_type not in treatment_dict:

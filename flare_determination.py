@@ -15,14 +15,15 @@ def _flare_chance(baseline_chance=0.05, disease_activity=None):
     if disease_activity is None:
         return None
         
-    rand_value = random.uniform(0.01, 0.75)
+    rand_value = random.uniform(0.2, 0.75)
     
     # Adjust flare chance based on disease activity
-    adjusted_chance = baseline_chance * disease_activity
+    adjusted_chance = baseline_chance * (1 + (disease_activity / 2))  # Reduced impact
     
     # Determine if flare occurs
     flare_occurs = rand_value < adjusted_chance
-
+    # Random Pain increase
+    flare_pain = random.uniform(3,4)
     if flare_occurs:
         return adjusted_chance
     else:
