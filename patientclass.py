@@ -79,13 +79,19 @@ class patientPainGenerator:
                     new_pain, 
                     self.pain_data,
                     self.das_score,
-                    dmard_counter,
+                    dmard_counter
                 )
                 
                 # Start new treatment logic - if recommended and not already on it - MAYBE WE ADD IN THAT ONLY CERTAIN # OF TREATMENTS AT ANYONE TIME?
                 if new_treatment and new_treatment not in self.treatments: # and len(self.treatments) < 5: # limit to 2 treatments at anyone time
                     self.treatments[new_treatment] = 0
                     self.treatment_history.append(new_treatment)
+                    # self.treatment_start_days[new_treatment] = day # Old line
+                    if new_treatment not in self.treatment_start_days:
+                        self.treatment_start_days[new_treatment] = []
+                    self.treatment_start_days[new_treatment].append(day) # New: Append to list
+                    if new_treatment == 'dmard':
+                        dmard_counter += 1
 
             # Apply treatment effects to pain (inc. duration of effect)
             treatment_effect = 0
@@ -127,7 +133,7 @@ class patientPainGenerator:
         Convert the pain_data dictionary to a pandas DataFrame
         
         Returns:
-            pandas.DataFrame: DataFrame containing patient pain data
+            pandas.DataFrame: DataFrame containing patient pain data with treatment start indicators
         """
         import pandas as pd
         
@@ -141,11 +147,38 @@ class patientPainGenerator:
         df['patient_id'] = self.id
         df['das_score'] = self.das_score
         
+        # Get all treatment types from treatment_response dictionary
+        treatment_types = list(self.treatment_response.keys())
+        
+        # Add boolean columns for treatment starts
+        for treatment in treatment_types:
+            column_name = f"started_{treatment}"
+            df[column_name] = False  # Initialize all as False
+        
+        # Treatment onset days mapping
+        treatment_onset = {
+            "emergency_steroid": 1,
+            "nsaid": 1,
+            "dmard": 14,
+            "biologic": 28,
+            "physical_therapy": 7
+        }
+        
+        # Fill in treatment start information, adjusted for onset days
+        for treatment, start_days_list in self.treatment_start_days.items(): # Iterate through list of start days
+            column_name = f"started_{treatment}"
+            for start_day in start_days_list: # Iterate through each start day for this treatment
+                # Adjust start day to when effects actually begin
+                effect_start_day = start_day - treatment_onset.get(treatment, 0)
+                # Make sure the day exists in our data range
+                if effect_start_day in df['day'].values:
+                    mask = df['day'] == effect_start_day
+                    df.loc[mask, column_name] = True
+        
         return df
-
 from plot_pain import plot_pain_over_time
 
-p1 = patientPainGenerator('p1', 2, seed = 42)
+p1 = patientPainGenerator('p1', 7, seed = 66)
 df = p1.get_pain_dataframe()
 print(df)
 

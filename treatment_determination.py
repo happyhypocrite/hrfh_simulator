@@ -34,11 +34,10 @@ def _responding_treatment_type(pain_score, pain_history=None, das_score=None, dm
         return "emergency_steroid", dmard_use
     elif max_pain >= 7.0:  # Significant pain
         return "nsaid", dmard_use
-    elif avg_pain >= 6.0 and len(recent_pain) >= 7:  # Persistent moderate pain
-        if dmard_use > 2:  # High disease activity
+    elif avg_pain >= 5.0 and len(recent_pain) >= 7:  # Persistent moderate pain
+        if dmard_use >= 2:  # High disease activity
             return "biologic", dmard_use
         else:
-            dmard_use += 1
             return "dmard", dmard_use
     elif 4.0 <= avg_pain < 6.0 and len(recent_pain) >= 7:  # Chronic mild pain
         return "physical_therapy", dmard_use
