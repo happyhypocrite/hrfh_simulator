@@ -165,9 +165,9 @@ class patientPainGenerator:
         }
         
         # Fill in treatment start information, adjusted for onset days
-        for treatment, start_days_list in self.treatment_start_days.items(): # Iterate through list of start days
+        for treatment, start_days_list in self.treatment_start_days.items():
             column_name = f"started_{treatment}"
-            for start_day in start_days_list: # Iterate through each start day for this treatment
+            for start_day in start_days_list:
                 # Adjust start day to when effects actually begin
                 effect_start_day = start_day - treatment_onset.get(treatment, 0)
                 # Make sure the day exists in our data range

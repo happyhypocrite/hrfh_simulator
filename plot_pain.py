@@ -58,8 +58,5 @@ def plot_pain_over_time(df, show_plot=True):
     ax.legend(loc='upper right')
 
     plt.tight_layout()
-
-    if show_plot:
-        plt.show()
     
     return fig
