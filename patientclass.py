@@ -10,7 +10,7 @@ class patientPainGenerator:
 
         active_flare = 0
         flare_days_remaining = 0
-        days = 180
+        days = 1000
 
         if seed is not None:
             random.seed(seed)

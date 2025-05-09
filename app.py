@@ -11,10 +11,12 @@ app_ui = ui.page_sidebar(
     ui.sidebar(
         ui.h3("Pain & Treatment"),
         ui.input_numeric("patient_amount", "Patients", value=5, min=1, max=100),
+        ui.input_numeric("seed_value", "Seed", value=42, min=1, max=100),
         ui.input_numeric("days_to_display", "Days to Display", value=180, min=1, max=1000),
         ui.hr(),
         ui.h3("Condition"),
-        ui.input_slider("noise", "Noise Amplitude", min=0, max=3, value=1.2, step=0.1),
+        ui.input_slider("noise", "Randomness", min=0, max=3, value=1.2, step=0.1),
+
         ui.hr(),
         ui.input_task_button("generate_data", "Generate Dataset"),
         ui.panel_conditional(
@@ -26,8 +28,9 @@ app_ui = ui.page_sidebar(
         ui.download_button("download_data", "Download Dataset"),
     ),
     ui.card(
-        ui.card_header("Pain Over Time"),
-        ui.output_plot("pain_plot"),        
+    ui.card_header("Pain Over Time"),
+    ui.output_plot("pain_plot", width="100%", height="500px"),  # Explicit height
+    width="100%"  # Make card use full width
     ),
     ui.card(
         ui.card_header("Data Table for Patient"),
@@ -47,6 +50,7 @@ def server(input, output, session):
     @reactive.event(input.generate_data)
     def generate_patient_data():
         try:
+            random.seed(input.seed_value())
             # Generate data for the specified number of patients
             patients = []
             patient_dataframes = []
@@ -66,7 +70,7 @@ def server(input, output, session):
                     patient = patientPainGenerator(
                         id=i,
                         das_score=das_score,
-                        noise_amplitude=noise_amplitude
+                        noise_amplitude=noise_amplitude,
                     )
                     patients.append(patient)
                     
@@ -138,15 +142,15 @@ def server(input, output, session):
         if df is None:
             fig, ax = plt.subplots(figsize=(10, 6))
             ax.text(0.5, 0.5, "Press 'Generate Dataset' to see data",
-                   ha='center', va='center', fontsize=14)
+                ha='center', va='center', fontsize=14)
             ax.axis('off')
             return fig
         
-        # Limit to the number of days to display
+        # Limit to the first X days instead of the last X days
         days_to_display = input.days_to_display()
-        max_day = df['day'].max()
-        min_day = max(0, max_day - days_to_display)
-        filtered_df = df[df['day'] >= min_day]
+        min_day = df['day'].min()
+        max_day = min_day + days_to_display
+        filtered_df = df[df['day'] <= max_day]
         
         return plot_pain_over_time(filtered_df, show_plot=False)
     
@@ -155,7 +159,14 @@ def server(input, output, session):
         df = selected_patient_data()
         if df is None:
             return pd.DataFrame()
-        return df.sort_values('day', ascending=False)
+        
+        # Apply the same filtering as in the plot
+        days_to_display = input.days_to_display()
+        min_day = df['day'].min()
+        max_day = min_day + days_to_display
+        filtered_df = df[df['day'] <= max_day]
+        
+        return filtered_df.sort_values('day', ascending=True)
     
     @render.download(filename="pain_treatment_data.csv")
     def download_data():
