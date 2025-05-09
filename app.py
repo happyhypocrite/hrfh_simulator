@@ -9,7 +9,7 @@ from patientclass import patientPainGenerator
 
 app_ui = ui.page_sidebar(
     ui.sidebar(
-        ui.h3("Pain & Treatment"),
+        ui.h3("Adjustable Variables"),
         ui.input_numeric("patient_amount", "Patients", value=5, min=1, max=100),
         ui.input_numeric("seed_value", "Seed", value=42, min=1, max=100),
         ui.input_numeric("days_to_display", "Days to Display", value=180, min=1, max=1000),
@@ -170,6 +170,17 @@ def server(input, output, session):
     
     @render.download(filename="pain_treatment_data.csv")
     def download_data():
-        return selected_patient_data()
+        df = selected_patient_data()
+        if df is None or df.empty:
+            # Return an empty DataFrame with appropriate columns if no data
+            return pd.DataFrame(columns=["day", "pain_score", "patient_id", "das_score"])
+        
+        # Apply the same filtering as in the plot and table
+        days_to_display = input.days_to_display()
+        min_day = df['day'].min()
+        max_day = min_day + days_to_display
+        filtered_df = df[df['day'] <= max_day]
+        
+        return filtered_df
 
 app = App(app_ui, server)
